@@ -3,10 +3,19 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
+# Detect if running on Vercel
+IS_VERCEL = os.environ.get("VERCEL") == "1"
+
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 load_dotenv(BASE_DIR / ".env")
 
-DATA_DIR = BASE_DIR / "data"
+# On Vercel, only /tmp is writable
+if IS_VERCEL:
+    import tempfile
+    DATA_DIR = Path(tempfile.gettempdir()) / "triage_data"
+else:
+    DATA_DIR = BASE_DIR / "data"
+
 REPORT_DIR = DATA_DIR / "reports"
 DB_PATH = DATA_DIR / "triage.db"
 
