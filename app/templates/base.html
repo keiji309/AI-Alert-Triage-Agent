@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}Triage Console{% endblock %}</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="shell">
+  <aside class="sidebar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.4-3 8-7 10-4-2-7-5.6-7-10V6l7-3z"/></svg>
+      </span>
+      <div>
+        <div class="brand-name">Triage Console</div>
+        <div class="brand-sub">Incident workspace</div>
+      </div>
+    </div>
+
+    <nav class="nav">
+      <a class="nav-item {{ 'active' if active == 'overview' }}" href="/">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+        Overview
+      </a>
+      <a class="nav-item {{ 'active' if active == 'queue' }}" href="/queue">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+        Alert queue
+      </a>
+    </nav>
+
+    <div class="sidebar-foot">
+      <div class="meta-row">
+        <span class="meta-label">Engine</span>
+        <span class="pill {{ 'ok' if llm_enabled else 'warn' }}">{{ 'LLM encoded' if llm_enabled else 'Deterministic' }}</span>
+      </div>
+      {% if model %}
+      <div class="meta-row"><span class="meta-label">Model</span><span class="mono small">{{ model }}</span></div>
+      {% endif %}
+      <div class="meta-row"><span class="meta-label">API</span><a class="meta-link" href="/docs">OpenAPI spec</a></div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <div class="topbar-title">
+        {% block pagehead %}{% endblock %}
+      </div>
+      <div class="topbar-actions">
+        {% block actions %}{% endblock %}
+      </div>
+    </header>
+
+    <main class="content">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+</div>
+
+<div class="toast-stack" id="toast-stack" aria-live="polite"></div>
+<script src="/static/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+{% block title %}Overview — Triage Console{% endblock %}
+{% block pagehead %}
+  <h1>Overview</h1>
+  <p class="topbar-sub">Operational summary of the alert pipeline</p>
+{% endblock %}
+{% block actions %}
+  <form method="post" action="/generate" data-confirm="Regenerate the demo dataset? This clears the current state." data-remote data-reload>
+    <button class="btn btn-ghost" data-loading-label="Regenerating…">Regenerate data</button>
+  </form>
+  <form method="post" action="/triage-all" data-confirm="Investigate all open cases?" data-remote data-reload>
+    <button class="btn" data-loading-label="Investigating…">Investigate all open</button>
+  </form>
+{% endblock %}
+{% block content %}
+
+<section class="kpi-row">
+  <div class="card kpi">
+    <div class="kpi-value">{{ stats.open }}</div>
+    <div class="kpi-label">Open cases</div>
+    <div class="kpi-caption">Awaiting investigation</div>
+  </div>
+  <div class="card kpi">
+    <div class="kpi-value">{{ stats.investigated }}</div>
+    <div class="kpi-label">Investigated</div>
+    <div class="kpi-caption">Verdict recorded</div>
+  </div>
+  <div class="card kpi">
+    <div class="kpi-value">{{ stats.auto_resolved }}</div>
+    <div class="kpi-label">Auto-resolved</div>
+    <div class="kpi-caption">Suppressed by rules</div>
+  </div>
+  <div class="card kpi">
+    <div class="kpi-value">{{ stats.total_alerts }}</div>
+    <div class="kpi-label">Total alerts</div>
+    <div class="kpi-caption">{{ stats.events }} raw events</div>
+  </div>
+</section>
+
+<section class="stat-strip">
+  <div class="stat"><span class="stat-value">{{ stats.severity.critical }}</span><span class="stat-label">Critical</span></div>
+  <div class="stat"><span class="stat-value">{{ stats.severity.high }}</span><span class="stat-label">High</span></div>
+  <div class="stat"><span class="stat-value">{{ stats.severity.medium }}</span><span class="stat-label">Medium</span></div>
+  <div class="stat"><span class="stat-value">{{ stats.severity.low }}</span><span class="stat-label">Low / Info</span></div>
+  <div class="stat"><span class="stat-value">{{ stats.suppressed_alerts }}</span><span class="stat-label">Suppressed alerts</span></div>
+  <div class="stat"><span class="stat-value">{{ "%.0f%%" % (stats.suppression_rate * 100) }}</span><span class="stat-label">Suppression rate</span></div>
+  <div class="stat"><span class="stat-value">{% if stats.avg_confidence %}{{ "%.0f%%" % (stats.avg_confidence * 100) }}{% else %}—{% endif %}</span><span class="stat-label">Avg confidence</span></div>
+</section>
+
+<div class="cols">
+  <div class="card">
+    <div class="card-head">
+      <div>
+        <h2>Severity distribution</h2>
+        <p class="card-sub">Cases across severity levels</p>
+      </div>
+    </div>
+    {% set sev_count = stats.severity.critical + stats.severity.high + stats.severity.medium + stats.severity.low %}
+    {% if sev_count %}
+    <div class="bars">
+      <div class="bar">
+        <div class="bar-label">Critical</div>
+        <div class="bar-track"><div class="bar-fill sev-critical" style="width: {{ (stats.severity.critical / sev_count * 100) | round(1) }}%"></div></div>
+        <div class="bar-num">{{ stats.severity.critical }}</div>
+      </div>
+      <div class="bar">
+        <div class="bar-label">High</div>
+        <div class="bar-track"><div class="bar-fill sev-high" style="width: {{ (stats.severity.high / sev_count * 100) | round(1) }}%"></div></div>
+        <div class="bar-num">{{ stats.severity.high }}</div>
+      </div>
+      <div class="bar">
+        <div class="bar-label">Medium</div>
+        <div class="bar-track"><div class="bar-fill sev-medium" style="width: {{ (stats.severity.medium / sev_count * 100) | round(1) }}%"></div></div>
+        <div class="bar-num">{{ stats.severity.medium }}</div>
+      </div>
+      <div class="bar">
+        <div class="bar-label">Low / Info</div>
+        <div class="bar-track"><div class="bar-fill sev-low" style="width: {{ (stats.severity.low / sev_count * 100) | round(1) }}%"></div></div>
+        <div class="bar-num">{{ stats.severity.low }}</div>
+      </div>
+    </div>
+    {% else %}<p class="empty">No cases yet.</p>{% endif %}
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <div>
+        <h2>Verdict distribution</h2>
+        <p class="card-sub">Where investigations landed</p>
+      </div>
+    </div>
+    <div class="legend-list">
+      {% for d, meta in stats.dispositions %}
+      <div class="legend-row">
+        <span class="badge disp disp-{{ d }}">{{ d|replace('_', ' ') }}</span>
+        <span class="legend-count">{{ meta.count }}</span>
+        <div class="bar-track"><div class="bar-fill disp-{{ d }}" style="width: {{ meta.pct }}%"></div></div>
+      </div>
+      {% else %}<p class="empty">No verdicts recorded yet.</p>{% endfor %}
+    </div>
+  </div>
+</div>
+
+<section class="card">
+  <div class="card-head">
+    <div>
+      <h2>Recent cases</h2>
+      <p class="card-sub">Latest activity by triage time</p>
+    </div>
+    <a class="btn btn-ghost btn-sm" href="/queue">View all</a>
+  </div>
+  {% if recent %}
+  <div class="table-skin">
+    <table class="registry">
+      <thead>
+        <tr><th>Case</th><th>Severity</th><th>Status</th><th>Created</th></tr>
+      </thead>
+      <tbody>
+        {% for c, v in recent %}
+        <tr>
+          <td>
+            <a class="link" href="/case/{{ c.id }}">{{ c.title }}</a>
+            <div class="muted small mono">{{ c.id }}</div>
+          </td>
+          <td><span class="badge sev sev-{{ c.implied_severity }}">{{ c.implied_severity }}</span></td>
+          <td><span class="badge status status-{{ c.status }}">{{ c.status|replace('_', ' ') }}</span></td>
+          <td class="muted small mono">{{ c.created_at[:19].replace('T', ' ') }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="empty">No cases. Generate the demo dataset to get started.</p>
+  {% endif %}
+</section>
+
+{% endblock %}

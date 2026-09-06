@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block title %}Alert queue — Triage Console{% endblock %}
+{% block pagehead %}
+  <h1>Alert queue</h1>
+  <p class="topbar-sub">All cases after correlation and pre-filtering</p>
+{% endblock %}
+{% block actions %}
+  <form method="post" action="/generate" data-confirm="Regenerate the demo dataset? This clears the current state." data-remote data-reload>
+    <button class="btn btn-ghost" data-loading-label="Regenerating…">Regenerate data</button>
+  </form>
+  <form method="post" action="/triage-all" data-confirm="Investigate all open cases?" data-remote data-reload>
+    <button class="btn" data-loading-label="Investigating…">Investigate all open</button>
+  </form>
+{% endblock %}
+{% block content %}
+
+<form class="filterbar" method="get" action="/queue">
+  <div class="filter-field grow">
+    <label for="q">Search</label>
+    <input id="q" name="q" type="text" value="{{ filters.q or '' }}" placeholder="Title or case id…">
+  </div>
+  <div class="filter-field">
+    <label for="status">Status</label>
+    <select id="status" name="status">
+      <option value="">All</option>
+      {% for s in ['open', 'triaging', 'resolved', 'auto_resolved'] %}
+      <option value="{{ s }}" {{ 'selected' if filters.status == s }}>{{ s|replace('_', ' ') }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="filter-field">
+    <label for="severity">Severity</label>
+    <select id="severity" name="severity">
+      <option value="">All</option>
+      {% for s in ['critical', 'high', 'medium', 'low', 'info'] %}
+      <option value="{{ s }}" {{ 'selected' if filters.severity == s }}>{{ s }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="filter-field">
+    <label for="disposition">Verdict</label>
+    <select id="disposition" name="disposition">
+      <option value="">All</option>
+      {% for d in ['true_positive', 'false_positive', 'suspicious', 'investigate'] %}
+      <option value="{{ d }}" {{ 'selected' if filters.disposition == d }}>{{ d|replace('_', ' ') }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="filter-actions">
+    <button class="btn" type="submit">Apply</button>
+    {% if filters.q or filters.status or filters.severity or filters.disposition %}
+    <a class="btn btn-ghost" href="/queue">Clear</a>
+    {% endif %}
+  </div>
+</form>
+
+{% if cases %}
+<div class="table-skin">
+  <table class="registry">
+    <thead>
+      <tr>
+        <th>Case</th>
+        <th>Severity</th>
+        <th>Status</th>
+        <th>Verdict</th>
+        <th>Confidence</th>
+        <th>Entities</th>
+        <th class="align-right">Action</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for c, v in cases %}
+      <tr>
+        <td>
+          <a class="link" href="/case/{{ c.id }}">{{ c.title }}</a>
+          <div class="muted small mono">{{ c.id }} · {{ c.created_at[:19].replace('T', ' ') }}</div>
+        </td>
+        <td><span class="badge sev sev-{{ c.implied_severity }}">{{ c.implied_severity }}</span></td>
+        <td><span class="badge status status-{{ c.status }}">{{ c.status|replace('_', ' ') }}</span></td>
+        <td>
+          {% if v and v.disposition %}
+            <span class="badge disp disp-{{ v.disposition }}">{{ v.disposition|replace('_', ' ') }}</span>
+          {% else %}<span class="muted small">—</span>{% endif %}
+        </td>
+        <td>
+          {% if v %}
+          <div class="confidence"><div class="confidence-fill" style="width: {{ '%.0f' % (v.confidence * 100) }}%"></div></div>
+          <span class="small muted mono">{{ "%.0f%%" % (v.confidence * 100) }}</span>
+          {% else %}<span class="muted small">—</span>{% endif %}
+        </td>
+        <td class="entities-cell">
+          {% for u in c.entities.users[:2] %}<span class="chip chip-user">{{ u }}</span>{% endfor %}
+          {% for ip in c.entities.ips[:2] %}<span class="chip chip-ip">{{ ip }}</span>{% endfor %}
+          {% if not c.entities.users and not c.entities.ips %}<span class="muted small">—</span>{% endif %}
+        </td>
+        <td class="align-right">
+          {% if c.status == 'open' or c.status == 'triaging' %}
+          <form method="post" action="/triage/{{ c.id }}" data-remote data-reload>
+            <button class="btn btn-sm" data-loading-label="Triaging…">Triage</button>
+          </form>
+          {% else %}
+          <a class="btn btn-sm btn-ghost" href="/case/{{ c.id }}">View</a>
+          {% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<div class="card empty-state">
+  <p class="empty-title">No cases match</p>
+  <p class="empty">Adjust the filters above or regenerate the dataset.</p>
+</div>
+{% endif %}
+
+{% endblock %}
